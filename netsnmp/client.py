@@ -53,7 +53,7 @@ class Varbind(object):
     def __init__(self, tag=None, iid=None, val=None, type=None):
         self.tag = STR(tag)
         self.iid = STR(iid)
-        self.val = STR(val)
+        self.val = val
         self.type = STR(type)
         # parse iid out of tag if needed
         if iid == None and tag != None:
@@ -63,7 +63,10 @@ class Varbind(object):
                 (self.tag, self.iid) = match.group(1,2)
 
     def __setattr__(self, name, val):
-        self.__dict__[name] = STR(val)
+        if name == 'val':
+          self.__dict__[name] = val
+        else:
+          self.__dict__[name] = STR(val)
 
     def print_str(self):
         return self.tag, self.iid, self.val, self.type

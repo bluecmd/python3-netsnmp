@@ -1018,7 +1018,7 @@ py_netsnmp_attr_set_bytes(PyObject *obj, char *attr_name,
   int ret = -1;
   if (obj && attr_name) {
     PyObject* val_obj =  (val ?
-        Py_BuildValue("y#", val, len) :
+        PyBytes_FromStringAndSize(val, len) :
         Py_BuildValue(""));
     ret = PyObject_SetAttrString(obj, attr_name, val_obj);
     Py_DECREF(val_obj);
@@ -1640,7 +1640,7 @@ netsnmp_get(PyObject *self, PyObject *args)
               Py_BuildValue(""));
         } else {
           PyTuple_SetItem(val_tuple, varlist_ind,
-              Py_BuildValue("y#", str_buf, len));
+              PyBytes_FromStringAndSize(str_buf, len));
         }
         Py_DECREF(varbind);
       } else {
@@ -1860,7 +1860,7 @@ netsnmp_getnext(PyObject *self, PyObject *args)
               Py_BuildValue(""));
         } else {
           PyTuple_SetItem(val_tuple, varlist_ind,
-              Py_BuildValue("y#", str_buf, len));
+              PyBytes_FromStringAndSize(str_buf, len));
         }
         Py_DECREF(varbind);
       } else {
@@ -2189,7 +2189,7 @@ application.
             /* save in return tuple as well - steals ref */
             _PyTuple_Resize(&val_tuple, result_count+1);
             PyTuple_SetItem(val_tuple, result_count++, 
-                Py_BuildValue("y#", str_buf, len));
+                PyBytes_FromStringAndSize(str_buf, len));
           } else {
             /* Return None for this variable. */
             _PyTuple_Resize(&val_tuple, result_count+1);
@@ -2442,7 +2442,7 @@ netsnmp_getbulk(PyObject *self, PyObject *args)
             /* save in return tuple as well - steals ref */
             _PyTuple_Resize(&val_tuple, varbind_ind+1);
             PyTuple_SetItem(val_tuple, varbind_ind, 
-                Py_BuildValue("y#", str_buf, len));
+                PyBytes_FromStringAndSize(str_buf, len));
 
             Py_DECREF(varbind);
 

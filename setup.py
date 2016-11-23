@@ -19,6 +19,13 @@ libs = re.findall(r" -l(\S+)", netsnmp_libs)
 setup(
     name="python3-netsnmp", version="1.0a1",
     description = 'The Net-SNMP Python Interface',
+    long_description = '''
+Python3 port of the official Net-SNMP Python bindings.
+
+Maintainer: Christian Svensson <blue@cmd.nu>
+
+Source: https://github.com/bluecmd/python3-netsnmp
+''',
     author = 'G. S. Marzot',
     author_email = 'giovanni.marzot@sparta.com',
     url = 'http://www.net-snmp.org',

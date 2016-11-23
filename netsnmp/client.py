@@ -1,8 +1,8 @@
-import client_intf
 import string
 import re
 import types
 from sys import stderr
+from netsnmp import client_intf
 
 # control verbosity of error output
 verbose = 1
@@ -35,12 +35,12 @@ def _parse_session_args(kargs):
         'TheirHostname':'',
         'TrustCert':''
         }
-    keys = kargs.keys()
+    keys = list(kargs.keys())
     for key in keys:
-        if sessArgs.has_key(key):
+        if key in sessArgs:
             sessArgs[key] = kargs[key]
         else:
-            print >>stderr, "ERROR: unknown key", key
+            print("ERROR: unknown key", key, file=stderr)
     return sessArgs
 
 def STR(obj):
@@ -127,7 +127,7 @@ class Session(object):
     
         sess_args = _parse_session_args(args)
 
-        for k,v in sess_args.items():
+        for k,v in list(sess_args.items()):
             self.__dict__[k] = v
 
             

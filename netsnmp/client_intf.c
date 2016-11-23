@@ -980,7 +980,54 @@ py_netsnmp_construct_varbind(void)
 }
 
 static int
+py_netsnmp_attr_set_string(PyObject *obj, char *attr_name,
+         char *val, size_t len)
+{
+  int ret = -1;
+  if (obj && attr_name) {
+    PyObject* val_obj =  (val ?
+        Py_BuildValue("s#", val, len) :
+        Py_BuildValue(""));
+    ret = PyObject_SetAttrString(obj, attr_name, val_obj);
+    Py_DECREF(val_obj);
+  }
+  return ret;
+}
+
+static int
 py_netsnmp_attr_string(PyObject *obj, char * attr_name, char **val,
+    Py_ssize_t *len)
+{
+  *val = NULL;
+  if (obj && attr_name && PyObject_HasAttrString(obj, attr_name)) {
+    PyObject *attr = PyObject_GetAttrString(obj, attr_name);
+    if (attr) {
+      *val = PyUnicode_AsUTF8AndSize(attr, len);
+      Py_DECREF(attr);
+      return 0;
+    }
+  }
+
+  return -1;
+}
+
+static int
+py_netsnmp_attr_set_bytes(PyObject *obj, char *attr_name,
+         char *val, size_t len)
+{
+  int ret = -1;
+  if (obj && attr_name) {
+    PyObject* val_obj =  (val ?
+        Py_BuildValue("y#", val, len) :
+        Py_BuildValue(""));
+    ret = PyObject_SetAttrString(obj, attr_name, val_obj);
+    Py_DECREF(val_obj);
+  }
+  return ret;
+}
+
+static int
+py_netsnmp_attr_bytes(PyObject *obj, char * attr_name, char **val,
     Py_ssize_t *len)
 {
   *val = NULL;
@@ -1040,21 +1087,6 @@ py_netsnmp_verbose(void)
   }
 
   return verbose;
-}
-
-static int
-py_netsnmp_attr_set_string(PyObject *obj, char *attr_name, 
-         char *val, size_t len)
-{
-  int ret = -1;
-  if (obj && attr_name) {
-    PyObject* val_obj =  (val ? 
-        Py_BuildValue("s#", val, len) : 
-        Py_BuildValue(""));
-    ret = PyObject_SetAttrString(obj, attr_name, val_obj);
-    Py_DECREF(val_obj);
-  }
-  return ret;
 }
 
 /**
@@ -1597,7 +1629,7 @@ netsnmp_get(PyObject *self, PyObject *args)
         len = __snprint_value((char *) str_buf, sizeof(str_buf),
             vars, tp, type, sprintval_flag);
         str_buf[len] = '\0';
-        py_netsnmp_attr_set_string(varbind, "val", (char *) str_buf, len);
+        py_netsnmp_attr_set_bytes(varbind, "val", (char *) str_buf, len);
 
         /* save in return tuple as well */
         if ((type == SNMP_ENDOFMIBVIEW) ||
@@ -1608,7 +1640,7 @@ netsnmp_get(PyObject *self, PyObject *args)
               Py_BuildValue(""));
         } else {
           PyTuple_SetItem(val_tuple, varlist_ind,
-              Py_BuildValue("s#", str_buf, len));
+              Py_BuildValue("y#", str_buf, len));
         }
         Py_DECREF(varbind);
       } else {
@@ -1817,7 +1849,7 @@ netsnmp_getnext(PyObject *self, PyObject *args)
             vars, tp, type, sprintval_flag);
         str_buf[len] = '\0';
 
-        py_netsnmp_attr_set_string(varbind, "val", (char *) str_buf, len);
+        py_netsnmp_attr_set_bytes(varbind, "val", (char *) str_buf, len);
 
         /* save in return tuple as well */
         if ((type == SNMP_ENDOFMIBVIEW) ||
@@ -1828,7 +1860,7 @@ netsnmp_getnext(PyObject *self, PyObject *args)
               Py_BuildValue(""));
         } else {
           PyTuple_SetItem(val_tuple, varlist_ind,
-              Py_BuildValue("s#", str_buf, len));
+              Py_BuildValue("y#", str_buf, len));
         }
         Py_DECREF(varbind);
       } else {
@@ -2147,7 +2179,7 @@ application.
                 vars,tp,type,sprintval_flag);
             str_buf[len] = '\0';
 
-            py_netsnmp_attr_set_string(varbind, "val", (char *) str_buf,
+            py_netsnmp_attr_set_bytes(varbind, "val", (char *) str_buf,
                 len);
 
             /* push the varbind onto the return varbinds */
@@ -2157,7 +2189,7 @@ application.
             /* save in return tuple as well - steals ref */
             _PyTuple_Resize(&val_tuple, result_count+1);
             PyTuple_SetItem(val_tuple, result_count++, 
-                Py_BuildValue("s#", str_buf, len));
+                Py_BuildValue("y#", str_buf, len));
           } else {
             /* Return None for this variable. */
             _PyTuple_Resize(&val_tuple, result_count+1);
@@ -2402,7 +2434,7 @@ netsnmp_getbulk(PyObject *self, PyObject *args)
                 vars, tp, type, sprintval_flag);
             str_buf[len] = '\0';
 
-            py_netsnmp_attr_set_string(varbind, "val", (char *) str_buf, len);
+            py_netsnmp_attr_set_bytes(varbind, "val", (char *) str_buf, len);
 
             /* push varbind onto varbinds */
             PyList_Append(varbinds, varbind);
@@ -2410,7 +2442,7 @@ netsnmp_getbulk(PyObject *self, PyObject *args)
             /* save in return tuple as well - steals ref */
             _PyTuple_Resize(&val_tuple, varbind_ind+1);
             PyTuple_SetItem(val_tuple, varbind_ind, 
-                Py_BuildValue("s#", str_buf, len));
+                Py_BuildValue("y#", str_buf, len));
 
             Py_DECREF(varbind);
 
@@ -2536,7 +2568,7 @@ netsnmp_set(PyObject *self, PyObject *args)
           }
         }
 
-        if (py_netsnmp_attr_string(varbind, "val", &val, &tmplen) < 0) {
+        if (py_netsnmp_attr_bytes(varbind, "val", &val, &tmplen) < 0) {
           snmp_free_pdu(pdu);
           goto done;
         }

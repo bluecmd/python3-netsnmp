@@ -2698,6 +2698,7 @@ PyInit_client_intf(void)
     return NULL;
   }
 
+  Py_INCREF(st->error);
   PyModule_AddObject(module, "Error", st->error);
 
   return module;

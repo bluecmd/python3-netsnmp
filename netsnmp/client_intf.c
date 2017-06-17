@@ -67,6 +67,11 @@
 
 typedef netsnmp_session SnmpSession;
 typedef struct tree SnmpMibNode;
+
+struct module_state {
+      PyObject *error;
+};
+
 static int __is_numeric_oid (char*);
 static int __is_leaf (struct tree*);
 static int __translate_appl_type (char*);
@@ -964,6 +969,10 @@ done:
    return(status);
 }
 
+static PyObject * exception(PyObject *m) {
+  return ((struct module_state*)PyModule_GetState(m))->error;
+}
+
 static PyObject * 
 py_netsnmp_construct_varbind(void)
 {
@@ -1166,8 +1175,7 @@ netsnmp_create_session(PyObject *self, PyObject *args)
     session.version = SNMP_VERSION_3;
   }
   if (session.version == -1) {
-    if (verbose)
-      printf("error:snmp_new_session:Unsupported SNMP version (%d)\n", version);
+    PyErr_Format(exception(self), "Unsupported SNMP version (%d)", version);
     goto end;
   }
 
@@ -1182,10 +1190,14 @@ netsnmp_create_session(PyObject *self, PyObject *args)
   ss = snmp_sess_open(&session);
 
   if (ss == NULL) {
-    if (verbose) 
-      printf("error:snmp_new_session: Couldn't open SNMP session");
+    PyErr_SetString(exception(self), snmp_api_errstring(snmp_errno));
   }
- end:
+
+end:
+  if (PyErr_Occurred()) {
+    return NULL;
+  }
+
   return PyLong_FromVoidPtr((void *)ss);
 }
 
@@ -1227,8 +1239,7 @@ netsnmp_create_session_v3(PyObject *self, PyObject *args)
   if (version == 3) {
     session.version = SNMP_VERSION_3;
   } else {
-    if (verbose)
-      printf("error:snmp_new_v3_session:Unsupported SNMP version (%d)\n", version);
+    PyErr_Format(exception(self), "Unsupported SNMP version (%d)", version);
     goto end;
   }
 
@@ -1269,8 +1280,7 @@ netsnmp_create_session_v3(PyObject *self, PyObject *args)
       session.securityAuthProto
         = snmp_duplicate_objid(a, session.securityAuthProtoLen);
     } else {
-      if (verbose)
-  printf("error:snmp_new_v3_session:Unsupported authentication protocol(%s)\n", auth_proto);
+      PyErr_Format(exception(self), "Unsupported authentication protocol (%s)", auth_proto);
       goto end;
     }
   if (session.securityLevel >= SNMP_SEC_LEVEL_AUTHNOPRIV) {
@@ -1281,9 +1291,7 @@ netsnmp_create_session_v3(PyObject *self, PyObject *args)
           (u_char *)auth_pass, STRLEN(auth_pass),
           session.securityAuthKey,
           &session.securityAuthKeyLen) != SNMPERR_SUCCESS) {
-  if (verbose)
-    printf("error:snmp_new_v3_session:Error generating Ku from authentication password.\n");
-  goto end;
+        goto error;
       }
     }
   }
@@ -1305,8 +1313,7 @@ netsnmp_create_session_v3(PyObject *self, PyObject *args)
       session.securityPrivProto
         = snmp_duplicate_objid(p, session.securityPrivProtoLen);
     } else {
-      if (verbose)
-  printf("error:snmp_new_v3_session:Unsupported privacy protocol(%s)\n", priv_proto);
+      PyErr_Format(exception(self), "Unsupported privacy protocol (%s)", priv_proto);
       goto end;
     }
 
@@ -1317,22 +1324,23 @@ netsnmp_create_session_v3(PyObject *self, PyObject *args)
         (u_char *)priv_pass, STRLEN(priv_pass),
         session.securityPrivKey,
         &session.securityPrivKeyLen) != SNMPERR_SUCCESS) {
-      if (verbose)
-  printf("error:v3_session: couldn't gen Ku from priv pass phrase.\n");
-      goto end;
+      goto error;
     }
   }
   
   ss = snmp_sess_open(&session);
 
- end:
+error:
   if (ss == NULL) {
-    if (verbose) 
-      printf("error:v3_session: couldn't open SNMP session(%s).\n",
-       snmp_api_errstring(snmp_errno));
+    PyErr_SetString(exception(self), snmp_api_errstring(snmp_errno));
   }
+end:
   free (session.securityEngineID);
   free (session.contextEngineID);
+
+  if (PyErr_Occurred()) {
+    return NULL;
+  }
 
   return PyLong_FromVoidPtr((void *)ss);
 }
@@ -1390,8 +1398,8 @@ netsnmp_create_session_tunneled(PyObject *self, PyObject *args)
       session.transport_configuration =
           netsnmp_container_find("transport_configuration:fifo");
       if (!session.transport_configuration) {
-          fprintf(stderr, "failed to initialize the transport configuration container\n");
-          return NULL;
+        PyErr_SetString(exception(self), "Failed to initialize the transport configuration container");
+        return NULL;
       }
 
       session.transport_configuration->compare =
@@ -1421,8 +1429,14 @@ netsnmp_create_session_tunneled(PyObject *self, PyObject *args)
   
   ss = snmp_sess_open(&session);
 
-  if (!ss)
-      return NULL;
+  if (!ss) {
+    PyErr_SetString(exception(self), snmp_api_errstring(snmp_errno));
+  }
+
+  if (PyErr_Occurred()) {
+    return NULL;
+  }
+
   /*
    * Note: on a 64-bit system the statement below discards the upper 32 bits of
    * "ss", which is most likely a bug.
@@ -2648,10 +2662,6 @@ static PyMethodDef module_methods[] = {
   {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 
-struct module_state {
-      PyObject *error;
-};
-
 static int module_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(((struct module_state*)PyModule_GetState(m))->error);
   return 0;
@@ -2687,5 +2697,8 @@ PyInit_client_intf(void)
     Py_DECREF(module);
     return NULL;
   }
+
+  PyModule_AddObject(module, "Error", st->error);
+
   return module;
 }

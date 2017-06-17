@@ -9,6 +9,9 @@ verbose = 1
 
 secLevelMap = { 'noAuthNoPriv':1, 'authNoPriv':2, 'authPriv':3 }
 
+class Error(Exception):
+    pass
+
 def _parse_session_args(kargs):
     sessArgs = {
         'Version':3,
@@ -138,48 +141,61 @@ class Session(object):
         transportCheck = re.compile('^(tls|dtls|ssh)');
         match = transportCheck.match(sess_args['DestHost'])
 
-        if match:
-            self.sess_ptr = client_intf.session_tunneled(
-                sess_args['Version'],
-                sess_args['DestHost'],
-                sess_args['LocalPort'],
-                sess_args['Retries'],
-                sess_args['Timeout'],
-                sess_args['SecName'],
-                secLevelMap[sess_args['SecLevel']],
-                sess_args['ContextEngineId'],
-                sess_args['Context'],
-                sess_args['OurIdentity'],
-                sess_args['TheirIdentity'],
-                sess_args['TheirHostname'],
-                sess_args['TrustCert'],
-                );
-        elif sess_args['Version'] == 3:
-            self.sess_ptr = client_intf.session_v3(
-                sess_args['Version'],
-                sess_args['DestHost'],
-                sess_args['LocalPort'],
-                sess_args['Retries'],
-                sess_args['Timeout'],
-                sess_args['SecName'],
-                secLevelMap[sess_args['SecLevel']],
-                sess_args['SecEngineId'],
-                sess_args['ContextEngineId'],
-                sess_args['Context'],
-                sess_args['AuthProto'],
-                sess_args['AuthPass'],
-                sess_args['PrivProto'],
-                sess_args['PrivPass'],
-                sess_args['Engineboots'],
-                sess_args['Enginetime'])
-        else:
-            self.sess_ptr = client_intf.session(
-                sess_args['Version'],
-                sess_args['Community'],
-                sess_args['DestHost'],
-                sess_args['LocalPort'],
-                sess_args['Retries'],
-                sess_args['Timeout'])
+        err = None
+
+        try:
+            if match:
+                self.sess_ptr = client_intf.session_tunneled(
+                    sess_args['Version'],
+                    sess_args['DestHost'],
+                    sess_args['LocalPort'],
+                    sess_args['Retries'],
+                    sess_args['Timeout'],
+                    sess_args['SecName'],
+                    secLevelMap[sess_args['SecLevel']],
+                    sess_args['ContextEngineId'],
+                    sess_args['Context'],
+                    sess_args['OurIdentity'],
+                    sess_args['TheirIdentity'],
+                    sess_args['TheirHostname'],
+                    sess_args['TrustCert'],
+                    );
+            elif sess_args['Version'] == 3:
+                self.sess_ptr = client_intf.session_v3(
+                    sess_args['Version'],
+                    sess_args['DestHost'],
+                    sess_args['LocalPort'],
+                    sess_args['Retries'],
+                    sess_args['Timeout'],
+                    sess_args['SecName'],
+                    secLevelMap[sess_args['SecLevel']],
+                    sess_args['SecEngineId'],
+                    sess_args['ContextEngineId'],
+                    sess_args['Context'],
+                    sess_args['AuthProto'],
+                    sess_args['AuthPass'],
+                    sess_args['PrivProto'],
+                    sess_args['PrivPass'],
+                    sess_args['Engineboots'],
+                    sess_args['Enginetime'])
+            else:
+                self.sess_ptr = client_intf.session(
+                    sess_args['Version'],
+                    sess_args['Community'],
+                    sess_args['DestHost'],
+                    sess_args['LocalPort'],
+                    sess_args['Retries'],
+                    sess_args['Timeout'])
+        except client_intf.Error as e:
+            err = e.args[0].strip()
+            if err[0] == '(' and err[-1] == ')':
+                err = err[1:-1]
+
+        # Re-wrap the error into a pure Python class to allow it to be pickled
+        # and other things. To not have the original exception attached, save 
+        # only the string value of the exception.
+        if err:
+            raise Error(err)
         
     def get(self, varlist):
         res = client_intf.get(self, varlist)

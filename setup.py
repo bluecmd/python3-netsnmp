@@ -17,7 +17,7 @@ incdirs = []
 libs = re.findall(r" -l(\S+)", netsnmp_libs)
 
 setup(
-    name="python3-netsnmp", version="1.1",
+    name="python3-netsnmp", version="1.1a1",
     description = 'The Net-SNMP Python Interface',
     long_description = '''
 Python3 port of the official Net-SNMP Python bindings.

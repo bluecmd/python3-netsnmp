@@ -1,3 +1,4 @@
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
 #include <net-snmp/net-snmp-config.h>
@@ -1604,6 +1605,8 @@ netsnmp_get(PyObject *self, PyObject *args)
         vars && (varlist_ind < varlist_len);
         vars = vars->next_variable, varlist_ind++) {
 
+      if (err_ind >= 1 && varlist_ind >= err_ind - 1)
+          continue;
       varbind = PySequence_GetItem(varlist, varlist_ind);
 
       if (PyObject_HasAttrString(varbind, "tag")) {
@@ -1625,7 +1628,6 @@ netsnmp_get(PyObject *self, PyObject *args)
           if (_debug_level) printf("netsnmp_get:is_leaf:%d\n",type);
         } else {
           getlabel_flag |= NON_LEAF_NAME;
-          type = __translate_asn_type(vars->type);
           if (_debug_level) printf("netsnmp_get:!is_leaf:%d\n",tp->type);
         }
 
@@ -1636,6 +1638,7 @@ netsnmp_get(PyObject *self, PyObject *args)
         py_netsnmp_attr_set_string(varbind, "tag", tag, STRLEN(tag));
         py_netsnmp_attr_set_string(varbind, "iid", iid, STRLEN(iid));
 
+        type = __translate_asn_type(vars->type);
         __get_type_str(type, type_str);
 
         py_netsnmp_attr_set_string(varbind, "type", type_str, strlen(type_str));

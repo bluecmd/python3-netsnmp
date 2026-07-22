@@ -140,6 +140,9 @@ class Session(object):
         # check for transports that may be tunneled
         transportCheck = re.compile('^(tls|dtls|ssh)');
         match = transportCheck.match(sess_args['DestHost'])
+        peer = sess_args['DestHost']
+        if not match and sess_args['RemotePort'] != 161:
+            peer = '{}:{}'.format(peer, sess_args['RemotePort'])
 
         err = None
 
@@ -163,7 +166,7 @@ class Session(object):
             elif sess_args['Version'] == 3:
                 self.sess_ptr = client_intf.session_v3(
                     sess_args['Version'],
-                    sess_args['DestHost'],
+                    peer,
                     sess_args['LocalPort'],
                     sess_args['Retries'],
                     sess_args['Timeout'],
@@ -182,7 +185,7 @@ class Session(object):
                 self.sess_ptr = client_intf.session(
                     sess_args['Version'],
                     sess_args['Community'],
-                    sess_args['DestHost'],
+                    peer,
                     sess_args['LocalPort'],
                     sess_args['Retries'],
                     sess_args['Timeout'])

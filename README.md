@@ -1,3 +1,6 @@
+[![PyPI version](https://img.shields.io/pypi/v/python3-netsnmp.svg)](https://pypi.org/project/python3-netsnmp/)
+[![License](https://img.shields.io/pypi/l/python3-netsnmp.svg)](LICENSE)
+
 		  The Python 'netsnmp' Extension Module
 		      for the Net-SNMP Library
 
@@ -25,6 +28,10 @@ Introduction:
    http://www.net-snmp.org/
 
 Availability:
+
+   Releases of this Python 3 port are published on the Python Package Index:
+
+     https://pypi.org/project/python3-netsnmp/
 
    The most recent release of the Python 'netsnmp' module can be found
    bundled with the latest Net-SNMP distribution available from:
@@ -63,8 +70,13 @@ KNOWN BUGS:
 
 Installation:
 
-   Build and install the Net-SNMP package - see Net-SNMP README and
-   INSTALL docs.
+   The package published on PyPI is a source distribution. Install the
+   Net-SNMP library and development headers first, then install it with pip:
+
+     python3 -m pip install python3-netsnmp
+
+   Alternatively, build and install the Net-SNMP package - see the Net-SNMP
+   README and INSTALL docs - and install this module from a source checkout.
 
    Unix:
 

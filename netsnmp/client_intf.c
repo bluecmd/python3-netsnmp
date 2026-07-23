@@ -2101,6 +2101,8 @@ netsnmp_walk(PyObject *self, PyObject *args)
         vars != NULL;
         vars = vars->next_variable, varlist_ind++) {
 
+      oid_arr_broken_check[varlist_ind] = calloc(MAX_OID_LEN, sizeof(oid));
+
       oid_arr_broken_check_len[varlist_ind] = vars->name_length;
       memcpy(oid_arr_broken_check[varlist_ind],
           vars->name, vars->name_length * sizeof(oid));
@@ -2218,10 +2220,7 @@ application.
           snmp_add_null_var(newpdu, vars->name,
               vars->name_length);
         }
-        if (notdone)
-          pdu = newpdu;
-        else
-          snmp_free_pdu(newpdu);
+        pdu = newpdu;
       }
       if (response)
         snmp_free_pdu(response);

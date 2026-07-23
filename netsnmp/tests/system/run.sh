@@ -39,6 +39,10 @@ done
 
 python3 -m unittest discover -v -s netsnmp/tests/system -p 'test_*.py'
 
+if [ "${RUN_VALGRIND:-1}" = 0 ]; then
+    exit 0
+fi
+
 valgrind \
     --error-exitcode=99 \
     --leak-check=full \

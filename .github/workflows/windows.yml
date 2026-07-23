@@ -43,10 +43,10 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            C:\msys64\mingw64\bin\net-snmp-config
-            C:\msys64\mingw64\bin\libnetsnmp-*.dll
-            C:\msys64\mingw64\lib\libnetsnmp*
-            C:\msys64\mingw64\include\net-snmp
+            ${{ runner.temp }}\msys64\mingw64\bin\net-snmp-config
+            ${{ runner.temp }}\msys64\mingw64\bin\libnetsnmp-*.dll
+            ${{ runner.temp }}\msys64\mingw64\lib\libnetsnmp*
+            ${{ runner.temp }}\msys64\mingw64\include\net-snmp
           key: netsnmp-${{ env.NETSNMP_VERSION }}-mingw64
 
       - name: Build and install net-snmp

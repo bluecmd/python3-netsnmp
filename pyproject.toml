@@ -7,7 +7,7 @@ name = "python3-netsnmp"
 version = "1.1a2"
 description = "The Net-SNMP Python Interface"
 readme = { file = "README", content-type = "text/plain" }
-requires-python = ">=3.6"
+requires-python = ">=3.7"
 license = { text = "BSD" }
 authors = [
     { name = "G. S. Marzot", email = "giovanni.marzot@sparta.com" },

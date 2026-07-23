@@ -1,5 +1,7 @@
 build/
 dist/
+__pycache__/
+*.py[co]
 .*.swp
 .*.swo
 *.egg-info/

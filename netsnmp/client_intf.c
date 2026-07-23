@@ -1346,6 +1346,12 @@ error:
 end:
   free (session.securityEngineID);
   free (session.contextEngineID);
+  /* snmp_sess_open() duplicates the security protocol OIDs into the session
+     it returns, so the copies made above are ours to release. Freeing them
+     here also covers the early "goto end" paths, where the privacy protocol
+     is rejected after the authentication protocol was already duplicated. */
+  free (session.securityAuthProto);
+  free (session.securityPrivProto);
 
   if (PyErr_Occurred()) {
     return NULL;

@@ -1919,7 +1919,7 @@ netsnmp_walk(PyObject *self, PyObject *args)
   netsnmp_session *ss;
   netsnmp_pdu *pdu, *response;
   netsnmp_pdu *newpdu;
-  netsnmp_variable_list *vars, *oldvars;
+  netsnmp_variable_list *vars;
   struct tree *tp;
   int len;
   oid **oid_arr = NULL;
@@ -1984,6 +1984,11 @@ netsnmp_walk(PyObject *self, PyObject *args)
 
     pdu = snmp_pdu_create(SNMP_MSG_GETNEXT);
 
+    if (!pdu) {
+      PyErr_NoMemory();
+      goto done;
+    }
+
     /* we need an initial count for memory allocation */
     varlist_iter = PyObject_GetIter(varlist);
     varlist_len = 0;
@@ -1998,10 +2003,23 @@ netsnmp_walk(PyObject *self, PyObject *args)
     oid_arr                  = calloc(varlist_len, sizeof(oid *));
     oid_arr_broken_check     = calloc(varlist_len, sizeof(oid *));
 
+    if (varlist_len && (!oid_arr_len || !oid_arr_broken_check_len ||
+        !oid_arr || !oid_arr_broken_check)) {
+      PyErr_NoMemory();
+      snmp_free_pdu(pdu);
+      goto done;
+    }
+
     for(varlist_ind = 0; varlist_ind < varlist_len; varlist_ind++) {
 
       oid_arr[varlist_ind] = calloc(MAX_OID_LEN, sizeof(oid));
       oid_arr_broken_check[varlist_ind] = calloc(MAX_OID_LEN, sizeof(oid));
+
+      if (!oid_arr[varlist_ind] || !oid_arr_broken_check[varlist_ind]) {
+        PyErr_NoMemory();
+        snmp_free_pdu(pdu);
+        goto done;
+      }
 
       oid_arr_len[varlist_ind]              = MAX_OID_LEN;
       oid_arr_broken_check_len[varlist_ind] = MAX_OID_LEN;
@@ -2109,8 +2127,6 @@ netsnmp_walk(PyObject *self, PyObject *args)
         vars != NULL;
         vars = vars->next_variable, varlist_ind++) {
 
-      oid_arr_broken_check[varlist_ind] = calloc(MAX_OID_LEN, sizeof(oid));
-
       oid_arr_broken_check_len[varlist_ind] = vars->name_length;
       memcpy(oid_arr_broken_check[varlist_ind],
           vars->name, vars->name_length * sizeof(oid));
@@ -2129,12 +2145,17 @@ netsnmp_walk(PyObject *self, PyObject *args)
       } else {
         newpdu = snmp_pdu_create(SNMP_MSG_GETNEXT);
 
+        if (!newpdu) {
+          PyErr_NoMemory();
+          snmp_free_pdu(response);
+          response = NULL;
+          break;
+        }
+
         for(vars = (response ? response->variables : NULL),
-            varlist_ind = 0,
-            oldvars = (pdu ? pdu->variables : NULL);
+            varlist_ind = 0;
             vars && (varlist_ind < varlist_len);
-            vars = vars->next_variable, varlist_ind++,
-            oldvars = (oldvars ? oldvars->next_variable : NULL)) {
+            vars = vars->next_variable, varlist_ind++) {
 
           if ((vars->name_length < oid_arr_len[varlist_ind]) ||
               (memcmp(oid_arr[varlist_ind], vars->name,
@@ -2228,7 +2249,10 @@ application.
           snmp_add_null_var(newpdu, vars->name,
               vars->name_length);
         }
-        pdu = newpdu;
+        if (notdone)
+          pdu = newpdu;
+        else
+          snmp_free_pdu(newpdu);
       }
       if (response)
         snmp_free_pdu(response);
@@ -2244,7 +2268,7 @@ application.
       /* propagate error */
       if (verbose)
         printf("error: walk response processing: unknown python error");
-      Py_DECREF(val_tuple);
+      Py_CLEAR(val_tuple);
     } 
   }
 
@@ -2252,12 +2276,16 @@ done:
   Py_XDECREF(varbinds);
   SAFE_FREE(oid_arr_len);
   SAFE_FREE(oid_arr_broken_check_len);
-  for(varlist_ind = 0; varlist_ind < varlist_len; varlist_ind ++) {
-    SAFE_FREE(oid_arr[varlist_ind]);
-    SAFE_FREE(oid_arr_broken_check[varlist_ind]);
-  }
+  if (oid_arr)
+    for(varlist_ind = 0; varlist_ind < varlist_len; varlist_ind ++)
+      SAFE_FREE(oid_arr[varlist_ind]);
+  if (oid_arr_broken_check)
+    for(varlist_ind = 0; varlist_ind < varlist_len; varlist_ind ++)
+      SAFE_FREE(oid_arr_broken_check[varlist_ind]);
   SAFE_FREE(oid_arr);
   SAFE_FREE(oid_arr_broken_check);
+  if (PyErr_Occurred())
+    return NULL;
   return (val_tuple ? val_tuple : Py_BuildValue(""));
 }
 

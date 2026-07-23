@@ -46,11 +46,24 @@ class SnmpV3Tests(unittest.TestCase):
         varlist = netsnmp.VarList(netsnmp.Varbind(SYS_DESCR, '0'))
         assert_value(self, session.get(varlist))
 
+    def test_unknown_user_is_rejected(self):
+        session = netsnmp.Session(**dict(V3_ARGS, SecName='nosuchuser'))
+        varlist = netsnmp.VarList(netsnmp.Varbind(SYS_DESCR, '0'))
+        values = session.get(varlist)
+        self.assertFalse(values and values[0])
+
     def test_wrong_auth_password_is_rejected(self):
-        """Proves the agent really enforces authPriv, so the tests above
-        are not silently passing over an unauthenticated session."""
-        args = dict(V3_ARGS, AuthPass='wrong_auth_pass')
-        session = netsnmp.Session(**args)
+        """Proves the agent really enforces authPriv, so the tests above are
+        not silently passing over an unauthenticated session.
+
+        Uses a dedicated user rather than the one above: net-snmp caches
+        localized USM keys per (engineID, username) process-wide, so reusing
+        a name that already authenticated successfully would reuse the good
+        key and the wrong passphrase would never reach the agent.
+        """
+        session = netsnmp.Session(
+            **dict(V3_ARGS, SecName='baduser', AuthPass='wrong_auth_pass',
+                   PrivPass='wrong_priv_pass'))
         varlist = netsnmp.VarList(netsnmp.Varbind(SYS_DESCR, '0'))
         values = session.get(varlist)
         self.assertFalse(values and values[0])

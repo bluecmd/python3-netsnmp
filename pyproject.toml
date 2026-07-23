@@ -14,6 +14,7 @@ authors = [
 ]
 maintainers = [
     { name = "Christian Svensson", email = "blue@cmd.nu" },
+    { name = "Markus Häll", email = "soundgoof@gmail.com" },
 ]
 classifiers = [
     "License :: OSI Approved :: BSD License",

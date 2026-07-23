@@ -7,8 +7,7 @@ runner discovers new test files automatically.
 
 The normal and Valgrind suites each run all discovered tests in one process.
 CI also builds the extension with GCC coverage and with ASan/UBSan. The
-coverage job requires execution of the walk lines involved in PDU and OID
-ownership, and uploads the full C coverage report.
+coverage job uploads the full C coverage report.
 
 Coverage also includes SNMPv1, multiple varbinds, protocol error paths,
 repeated session and walk lifecycles, and the Python `Varbind` and `VarList`

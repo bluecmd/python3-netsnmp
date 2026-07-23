@@ -24,6 +24,13 @@ class SnmpV1Tests(unittest.TestCase):
             netsnmp.Varbind(SYS_DESCR, '0'), **V1_READ_ARGS)
         assert_value(self, values)
 
+    def test_get_unknown_instance_returns_no_value(self):
+        varbind = netsnmp.Varbind(SYS_DESCR, '123')
+
+        self.assertEqual(netsnmp.snmpget(varbind, **V1_READ_ARGS), (None,))
+        self.assertIsNone(varbind.val)
+        self.assertIsNone(varbind.type)
+
     def test_getnext(self):
         values = netsnmp.snmpgetnext(
             netsnmp.Varbind(SYSTEM), **V1_READ_ARGS)

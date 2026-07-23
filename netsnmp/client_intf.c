@@ -1619,6 +1619,9 @@ netsnmp_get(PyObject *self, PyObject *args)
         vars && (varlist_ind < varlist_len);
         vars = vars->next_variable, varlist_ind++) {
 
+      if (err_ind >= 1 && varlist_ind >= err_ind - 1)
+        continue;
+
       varbind = PySequence_GetItem(varlist, varlist_ind);
 
       if (PyObject_HasAttrString(varbind, "tag")) {

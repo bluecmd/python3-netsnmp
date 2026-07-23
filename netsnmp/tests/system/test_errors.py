@@ -13,6 +13,12 @@ class ErrorPathTests(unittest.TestCase):
         self.assertEqual(values, (None,))
         self.assertIn(varbind.type, ('NOSUCHOBJECT', 'NOSUCHINSTANCE'))
 
+    def test_unknown_instance_returns_no_value(self):
+        varbind = netsnmp.Varbind(SYS_DESCR, '123')
+
+        self.assertEqual(netsnmp.snmpget(varbind, **READ_ARGS), (None,))
+        self.assertEqual(varbind.type, 'NOSUCHINSTANCE')
+
     def test_read_only_set_is_rejected(self):
         session = netsnmp.Session(**READ_ARGS)
         varlist = netsnmp.VarList(

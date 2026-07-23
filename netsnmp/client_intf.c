@@ -1541,8 +1541,12 @@ netsnmp_get(PyObject *self, PyObject *args)
 
     if (varlist) {
       PyObject *varlist_iter = PyObject_GetIter(varlist);
+      if (!varlist_iter) {
+        snmp_free_pdu(pdu);
+        goto done;
+      }
 
-      while (varlist_iter && (varbind = PyIter_Next(varlist_iter))) {
+      while ((varbind = PyIter_Next(varlist_iter))) {
         if (py_netsnmp_attr_string(varbind, "tag", &tag, NULL) < 0 ||
             py_netsnmp_attr_string(varbind, "iid", &iid, NULL) < 0)
         {
@@ -1688,6 +1692,10 @@ netsnmp_get(PyObject *self, PyObject *args)
 
 done:
   SAFE_FREE(oid_arr);
+  if (PyErr_Occurred()) {
+    Py_XDECREF(val_tuple);
+    return NULL;
+  }
   return (val_tuple ? val_tuple : Py_BuildValue(""));
 }
 
@@ -1759,8 +1767,12 @@ netsnmp_getnext(PyObject *self, PyObject *args)
 
     if (varlist) {
       PyObject *varlist_iter = PyObject_GetIter(varlist);
+      if (!varlist_iter) {
+        snmp_free_pdu(pdu);
+        goto done;
+      }
 
-      while (varlist_iter && (varbind = PyIter_Next(varlist_iter))) {
+      while ((varbind = PyIter_Next(varlist_iter))) {
         if (py_netsnmp_attr_string(varbind, "tag", &tag, NULL) < 0 ||
             py_netsnmp_attr_string(varbind, "iid", &iid, NULL) < 0)
         {
@@ -1908,6 +1920,10 @@ netsnmp_getnext(PyObject *self, PyObject *args)
 
 done:
   SAFE_FREE(oid_arr);
+  if (PyErr_Occurred()) {
+    Py_XDECREF(val_tuple);
+    return NULL;
+  }
   return (val_tuple ? val_tuple : Py_BuildValue(""));
 }
 
@@ -1997,8 +2013,12 @@ netsnmp_walk(PyObject *self, PyObject *args)
 
     /* we need an initial count for memory allocation */
     varlist_iter = PyObject_GetIter(varlist);
+    if (!varlist_iter) {
+      snmp_free_pdu(pdu);
+      goto done;
+    }
     varlist_len = 0;
-    while (varlist_iter && (varbind = PyIter_Next(varlist_iter))) {
+    while ((varbind = PyIter_Next(varlist_iter))) {
       varlist_len++;
     }
     Py_DECREF(varlist_iter);
@@ -2529,14 +2549,16 @@ netsnmp_getbulk(PyObject *self, PyObject *args)
       /* propagate error */
       if (verbose)
         printf("error: getbulk response processing: unknown python error");
-      if (val_tuple)
-        Py_DECREF(val_tuple);
-      val_tuple = NULL;
+      Py_CLEAR(val_tuple);
     }
   }
 
 done:
   SAFE_FREE(oid_arr);
+  if (PyErr_Occurred()) {
+    Py_XDECREF(val_tuple);
+    return NULL;
+  }
   return (val_tuple ? val_tuple : Py_BuildValue(""));
 }
 
@@ -2545,7 +2567,7 @@ netsnmp_set(PyObject *self, PyObject *args)
 {
   PyObject *session;
   PyObject *varlist;
-  PyObject *varbind;
+  PyObject *varbind = NULL;
   PyObject *ret = NULL;
   netsnmp_session *ss;
   netsnmp_pdu *pdu, *response;
@@ -2593,8 +2615,12 @@ netsnmp_set(PyObject *self, PyObject *args)
 
     if (varlist) {
       PyObject *varlist_iter = PyObject_GetIter(varlist);
+      if (!varlist_iter) {
+        snmp_free_pdu(pdu);
+        goto done;
+      }
 
-      while (varlist_iter && (varbind = PyIter_Next(varlist_iter))) {
+      while ((varbind = PyIter_Next(varlist_iter))) {
         if (py_netsnmp_attr_string(varbind, "tag", &tag, NULL) < 0 ||
             py_netsnmp_attr_string(varbind, "iid", &iid, NULL) < 0)
         {
@@ -2679,6 +2705,8 @@ netsnmp_set(PyObject *self, PyObject *args)
 done:
   Py_XDECREF(varbind); 
   SAFE_FREE(oid_arr);
+  if (PyErr_Occurred())
+    return NULL;
   return (ret ? ret : Py_BuildValue(""));
 }
 

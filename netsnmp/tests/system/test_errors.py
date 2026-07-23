@@ -6,6 +6,23 @@ from netsnmp.tests.system.common import READ_ARGS, SYS_DESCR, SYS_LOCATION
 
 
 class ErrorPathTests(unittest.TestCase):
+    def test_session_methods_reject_bare_varbind(self):
+        session = netsnmp.Session(**READ_ARGS)
+        varbind = netsnmp.Varbind(
+            '.1.3.6.1.2.1.1.3', '0', b'1', 'INTEGER')
+        calls = (
+            (TypeError, lambda: session.get(varbind)),
+            (TypeError, lambda: session.getnext(varbind)),
+            (TypeError, lambda: session.set(varbind)),
+            (AttributeError, lambda: session.walk(varbind)),
+            (AttributeError, lambda: session.getbulk(0, 1, varbind)),
+        )
+
+        for error_type, call in calls:
+            with self.subTest(call=call):
+                with self.assertRaises(error_type):
+                    call()
+
     def test_unknown_oid_returns_no_value(self):
         varbind = netsnmp.Varbind('.1.3.6.1.2.1.1.999', '0')
         values = netsnmp.snmpget(varbind, **READ_ARGS)

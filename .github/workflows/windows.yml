@@ -1,0 +1,38 @@
+name: Windows build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build (MSYS2 / mingw-w64)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-net-snmp
+            mingw-w64-x86_64-python
+            mingw-w64-x86_64-python-setuptools
+
+      - name: Show toolchain versions
+        run: |
+          gcc --version
+          python --version
+          net-snmp-config --version
+          net-snmp-config --libs
+
+      - name: Build extension
+        run: python setup.py build

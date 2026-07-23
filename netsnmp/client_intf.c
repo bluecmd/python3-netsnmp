@@ -4,14 +4,22 @@
 #include <net-snmp/net-snmp-config.h>
 #include <net-snmp/net-snmp-includes.h>
 #include <sys/types.h>
+#ifdef _WIN32
+/* On Windows the socket API (inet_addr, etc.) lives in winsock, not the
+   POSIX arpa/inet.h and netdb.h headers. net-snmp-includes.h already pulls
+   in winsock2.h; ws2tcpip.h provides the address helpers we use. */
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
 #include <arpa/inet.h>
+#include <netdb.h>
+#endif
 #include <errno.h>
 #include <stdio.h>
 #include <ctype.h>
 #ifdef I_SYS_TIME
 #include <sys/time.h>
 #endif
-#include <netdb.h>
 #include <stdlib.h>
 
 #ifdef HAVE_REGEX_H

@@ -1,0 +1,82 @@
+name: Windows build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  NETSNMP_VERSION: "5.9.4"
+
+jobs:
+  build:
+    name: Build (MSYS2 / mingw-w64)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            base-devel
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-openssl
+            mingw-w64-x86_64-python
+            mingw-w64-x86_64-python-setuptools
+            perl
+            make
+            tar
+            wget
+
+      # net-snmp is not packaged in MSYS2/vcpkg/conda-forge for Windows, so
+      # build the client library from source into the mingw64 prefix. This
+      # gives us net-snmp-config on PATH, which setup.py relies on.
+      - name: Cache net-snmp install
+        id: cache-netsnmp
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ runner.temp }}\msys64\mingw64\bin\net-snmp-config
+            ${{ runner.temp }}\msys64\mingw64\bin\libnetsnmp-*.dll
+            ${{ runner.temp }}\msys64\mingw64\lib\libnetsnmp*
+            ${{ runner.temp }}\msys64\mingw64\include\net-snmp
+          key: netsnmp-${{ env.NETSNMP_VERSION }}-mingw64
+
+      - name: Build and install net-snmp
+        if: steps.cache-netsnmp.outputs.cache-hit != 'true'
+        run: |
+          set -euxo pipefail
+          cd "$RUNNER_TEMP"
+          wget -q "https://downloads.sourceforge.net/project/net-snmp/net-snmp/${NETSNMP_VERSION}/net-snmp-${NETSNMP_VERSION}.tar.gz"
+          tar xf "net-snmp-${NETSNMP_VERSION}.tar.gz"
+          cd "net-snmp-${NETSNMP_VERSION}"
+          ./configure \
+            --prefix=/mingw64 \
+            --with-defaults \
+            --disable-agent \
+            --disable-applications \
+            --disable-manuals \
+            --disable-scripts \
+            --disable-mibs \
+            --without-perl-modules \
+            --disable-embedded-perl \
+            --with-openssl=/mingw64
+          make -j$(nproc)
+          make install
+
+      - name: Show toolchain versions
+        run: |
+          gcc --version
+          python --version
+          net-snmp-config --version
+          net-snmp-config --libs
+
+      - name: Build extension
+        run: python setup.py build

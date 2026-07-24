@@ -1,7 +1,11 @@
 build/
 dist/
+.vscode/
 __pycache__/
 *.py[co]
+*.so
+*.gcov
+client_intf-coverage.txt
 .*.swp
 .*.swo
 *.egg-info/

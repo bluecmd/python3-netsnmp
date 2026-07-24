@@ -40,7 +40,7 @@ jobs:
       # gives us net-snmp-config on PATH, which setup.py relies on.
       - name: Cache net-snmp install
         id: cache-netsnmp
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ${{ runner.temp }}\msys64\mingw64\bin\net-snmp-config

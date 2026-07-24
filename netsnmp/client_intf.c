@@ -1045,16 +1045,36 @@ py_netsnmp_attr_set_bytes(PyObject *obj, char *attr_name,
 }
 
 static int
-py_netsnmp_attr_bytes(PyObject *obj, char * attr_name, char **val,
-    Py_ssize_t *len)
+py_netsnmp_attr_value(PyObject *obj, char *attr_name, char **val,
+    Py_ssize_t *len, PyObject **value_obj)
 {
   *val = NULL;
+  *value_obj = NULL;
   if (obj && attr_name && PyObject_HasAttrString(obj, attr_name)) {
     PyObject *attr = PyObject_GetAttrString(obj, attr_name);
     if (attr) {
-      int retval;
-      retval = PyBytes_AsStringAndSize(attr, val, len);
-      Py_DECREF(attr);
+      int retval = -1;
+
+      if (PyBytes_Check(attr)) {
+        retval = PyBytes_AsStringAndSize(attr, val, len);
+      } else {
+        PyObject *str_attr = PyObject_Str(attr);
+        Py_DECREF(attr);
+        attr = str_attr;
+        if (attr) {
+          const char *str_val = PyUnicode_AsUTF8AndSize(attr, len);
+          if (str_val) {
+            *val = (char *)str_val;
+            retval = 0;
+          }
+        }
+      }
+
+      if (retval == 0) {
+        *value_obj = attr;
+      } else {
+        Py_XDECREF(attr);
+      }
       return retval;
     }
   }
@@ -2594,6 +2614,7 @@ netsnmp_set(PyObject *self, PyObject *args)
   char err_str[STR_BUF_SIZE];
   char *tmpstr;
   Py_ssize_t tmplen;
+  PyObject *value_obj = NULL;
 
   oid_arr = calloc(MAX_OID_LEN, sizeof(oid));
 
@@ -2654,7 +2675,8 @@ netsnmp_set(PyObject *self, PyObject *args)
           }
         }
 
-        if (py_netsnmp_attr_bytes(varbind, "val", &val, &tmplen) < 0) {
+        if (py_netsnmp_attr_value(varbind, "val", &val, &tmplen,
+              &value_obj) < 0) {
           snmp_free_pdu(pdu);
           goto done;
         }
@@ -2675,6 +2697,7 @@ netsnmp_set(PyObject *self, PyObject *args)
         len = (int)tmplen;
         status = __add_var_val_str(pdu, oid_arr, oid_arr_len,
             (char *) tmp_val_str, len, type);
+        Py_CLEAR(value_obj);
 
         if (verbose && status == FAILURE)
           printf("error: set: adding variable/value to PDU");
@@ -2706,6 +2729,7 @@ netsnmp_set(PyObject *self, PyObject *args)
       ret = Py_BuildValue("i",0); /* fail, return False */
   } 
 done:
+  Py_XDECREF(value_obj);
   Py_XDECREF(varbind); 
   SAFE_FREE(oid_arr);
   if (PyErr_Occurred())

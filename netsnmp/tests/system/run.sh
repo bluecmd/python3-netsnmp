@@ -20,6 +20,9 @@ python3 setup.py build_ext --inplace
 SNMPD_CONFIG="$RUNTIME_DIR/snmpd.conf"
 cat "$ROOT/netsnmp/tests/system/snmpd.conf" >"$SNMPD_CONFIG"
 printf '\npersistentDir %s\n' "$RUNTIME_DIR" >>"$SNMPD_CONFIG"
+printf 'pass_persist .1.3.6.1.4.1.8072.9999.9999 %s %s\n' \
+    "$(command -v python3)" \
+    "$ROOT/netsnmp/tests/system/set_test_agent.py" >>"$SNMPD_CONFIG"
 
 snmpd -f -Lo -C \
     -c "$SNMPD_CONFIG" \
